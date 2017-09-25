@@ -1,0 +1,37 @@
+<html>
+    <body>
+        <button onclick="go()">GO</button><br/>
+        <b>Post message</b>:
+        <div id="postmessage"></div>
+        <b>Shared Array Buffer</b>:
+        <div id="shared"></div>
+    </body>
+    <script>
+
+let postMessageCount = 0;
+var sharedBuffer = new SharedArrayBuffer(1024);
+const sabView = new Uint32Array(sharedBuffer);
+const worker = new Worker('worker.js');
+const sabWorker = new Worker('sab-worker.js');
+
+worker.onmessage = v => {
+    postMessageCount = v.data;
+
+    if (postMessageCount < 100000) {
+        worker.postMessage(postMessageCount);
+    }
+};
+
+function go() {
+    worker.postMessage(postMessageCount);
+    sabWorker.postMessage(sharedBuffer);
+}
+
+function drawCount() {
+    postmessage.textContent = postMessageCount;
+    shared.textContent = sabView[0];
+    requestAnimationFrame(drawCount);
+}
+drawCount();
+    </script>
+</html>
