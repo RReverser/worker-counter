@@ -2,36 +2,40 @@
     <body>
         <button onclick="go()">GO</button><br/>
         <b>Post message</b>:
-        <div id="postmessage"></div>
+        <div id="postmessage">0</div>
         <b>Shared Array Buffer</b>:
-        <div id="shared"></div>
+        <div id="shared">0</div>
     </body>
     <script>
 
+let buffer = new ArrayBuffer(1024);
 let postMessageCount = 0;
-var sharedBuffer = new SharedArrayBuffer(1024);
+
+const sharedBuffer = new SharedArrayBuffer(1024);
 const sabView = new Uint32Array(sharedBuffer);
+
 const worker = new Worker('worker.js');
 const sabWorker = new Worker('sab-worker.js');
 
-worker.onmessage = v => {
-    postMessageCount = v.data;
+let startTime;
 
-    if (postMessageCount < 100000) {
-        worker.postMessage(postMessageCount);
-    }
+function updateText(target, view) {
+    target.textContent = `${view[0]} finished in ${(performance.now() - startTime).toFixed(2)} ms`;
+}
+
+worker.onmessage = v => {
+    buffer = v.data; // receive modified buffer back
+    updateText(postmessage, new Uint32Array(buffer));
+};
+
+sabWorker.onmessage = v => {
+    updateText(shared, sabView);
 };
 
 function go() {
-    worker.postMessage(postMessageCount);
-    sabWorker.postMessage(sharedBuffer);
+    startTime = performance.now();
+    worker.postMessage(buffer, [buffer]); // transfer buffer to the worker
+    sabWorker.postMessage(sharedBuffer); // share buffer with the worker
 }
-
-function drawCount() {
-    postmessage.textContent = postMessageCount;
-    shared.textContent = sabView[0];
-    requestAnimationFrame(drawCount);
-}
-drawCount();
     </script>
 </html>
